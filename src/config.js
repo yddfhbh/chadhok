@@ -26,6 +26,7 @@ export const GEMINI_FALLBACK_MODELS = getUniqueValues([
   "gemini-3.1-flash-lite",
 ]);
 export const GEMINI_MODELS = getUniqueValues([GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS]);
+export const GOOGLE_GENAI_USE_VERTEXAI = process.env.GOOGLE_GENAI_USE_VERTEXAI?.trim() || "";
 export const RESET_COMMAND = process.env.RESET_COMMAND?.trim() || "!reset";
 export const MAX_PROMPT_CHARS = Number.parseInt(process.env.MAX_PROMPT_CHARS || "4000", 10);
 export const RESET_ALLOWED_USER_ID =

@@ -68,6 +68,12 @@ export function buildDiscordClient() {
       await sendReply(message, reply.text);
     } catch (error) {
       console.error("Gemini request failed:", error);
+
+      if (error?.code === "GEMINI_AUTHENTICATION_FAILED") {
+        await sendReply(message, "인증이 꼬였다. API 키부터 다시 갈아라, My son.");
+        return;
+      }
+
       await sendReply(message, "서버가 잠깐 비틀거린다. No panic. 잠깐 후 다시 던져.");
     }
   });
