@@ -1,9 +1,10 @@
 import { GoogleGenAI } from "@google/genai";
 
-import { GEMINI_API_KEY, GEMINI_MODEL } from "./config.js";
+import { GEMINI_API_KEYS, GEMINI_MODELS } from "./config.js";
 import { GIGACHAD_SYSTEM_INSTRUCTION } from "./gigachad-prompt.js";
 
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+const geminiClients = GEMINI_API_KEYS.map((apiKey) => new GoogleGenAI({ apiKey }));
+let nextClientIndex = 0;
 
 function isMissingHistoryError(error) {
   const status = error?.status;
@@ -14,21 +15,89 @@ function isMissingHistoryError(error) {
     || /interaction/i.test(message) && /not found/i.test(message);
 }
 
-export async function generateGigachadReply(prompt, previousInteractionId) {
-  try {
-    return await createInteraction(prompt, previousInteractionId);
-  } catch (error) {
-    if (!previousInteractionId || !isMissingHistoryError(error)) {
-      throw error;
-    }
+function isRetryableKeyError(error) {
+  const status = error?.status;
+  const message = String(error?.message ?? "").toLowerCase();
 
-    return createInteraction(prompt, undefined);
-  }
+  return status === 429
+    || status === 500
+    || status === 503
+    || message.includes("quota")
+    || message.includes("rate limit")
+    || message.includes("resource exhausted");
 }
 
-async function createInteraction(prompt, previousInteractionId) {
-  const interaction = await ai.interactions.create({
-    model: GEMINI_MODEL,
+function isRetryableModelError(error) {
+  const status = error?.status;
+  const message = String(error?.message ?? "").toLowerCase();
+
+  return status === 404
+    || status === 400
+    || status === 500
+    || status === 503
+    || message.includes("model")
+    || message.includes("unsupported")
+    || message.includes("not found")
+    || message.includes("invalid argument");
+}
+
+function getClientOrder() {
+  const startIndex = nextClientIndex % geminiClients.length;
+  const ordered = [];
+
+  for (let offset = 0; offset < geminiClients.length; offset += 1) {
+    const index = (startIndex + offset) % geminiClients.length;
+    ordered.push(geminiClients[index]);
+  }
+
+  nextClientIndex = (startIndex + 1) % geminiClients.length;
+  return ordered;
+}
+
+export async function generateGigachadReply(prompt, previousInteractionId) {
+  let lastError;
+
+  for (const model of GEMINI_MODELS) {
+    const clients = getClientOrder();
+
+    for (let attempt = 0; attempt < clients.length; attempt += 1) {
+      const client = clients[attempt];
+
+      try {
+        return await createInteraction(client, model, prompt, previousInteractionId);
+      } catch (error) {
+        lastError = error;
+
+        if (previousInteractionId && isMissingHistoryError(error)) {
+          try {
+            return await createInteraction(client, model, prompt, undefined);
+          } catch (retryError) {
+            lastError = retryError;
+
+            if (
+              !isRetryableKeyError(retryError)
+              && !isRetryableModelError(retryError)
+            ) {
+              throw retryError;
+            }
+
+            continue;
+          }
+        }
+
+        if (!isRetryableKeyError(error) && !isRetryableModelError(error)) {
+          throw error;
+        }
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+async function createInteraction(client, model, prompt, previousInteractionId) {
+  const interaction = await client.interactions.create({
+    model,
     input: prompt,
     previous_interaction_id: previousInteractionId,
     system_instruction: GIGACHAD_SYSTEM_INSTRUCTION,

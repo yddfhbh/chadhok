@@ -4,7 +4,7 @@
 
 ## 구조
 
-`yddfhbh/kannyan` 쪽처럼 엔트리 포인트를 얇게 두고, 역할별로 파일을 나눴다.
+`yddfhbh/kannyan`처럼 엔트리 포인트는 얇게 두고 역할별로 파일을 나눴다.
 
 - `src/index.js`: 부팅
 - `src/bot.js`: 디스코드 이벤트 처리
@@ -21,13 +21,9 @@
 - DM 대화 지원
 - Google AI Studio Gemini Interactions API 사용
 - 채널별, 사용자별 문맥 유지
+- 여러 Gemini API 키 순환 사용
+- 메인 모델 실패 시 fallback 모델 시도
 - 리셋 권한 제한
-
-## 준비물
-
-- Node.js 20 이상
-- Discord 봇 토큰
-- Google AI Studio API 키
 
 ## 설치
 
@@ -35,24 +31,30 @@
 npm install
 ```
 
-`.env.example`을 참고해서 `.env`를 만든다.
+`.env.example`을 보고 `.env`를 만든다.
 
 ```env
 DISCORD_TOKEN=your_discord_bot_token
+GEMINI_API_KEYS=key_one,key_two
 GEMINI_API_KEY=your_google_ai_studio_api_key
-GEMINI_MODEL=gemini-3.6-flash
+GEMINI_MODEL=gemini-3.5-flash-lite
+GEMINI_FALLBACK_MODELS=gemini-3.1-flash-lite
 RESET_COMMAND=!reset
 RESET_ALLOWED_USER_ID=635107514471415808
-MAX_PROMPT_CHARS=4000
+MAX_PROMPT_CHARS=40000
 ```
 
-`GOOGLE_API_KEY`를 써도 되지만, 여기서는 `GEMINI_API_KEY` 기준으로 맞췄다.
+## 키와 모델 동작 방식
+
+- `GEMINI_API_KEYS`에 키를 쉼표로 넣으면 요청마다 키를 돌려 쓴다.
+- `GEMINI_API_KEY`나 `GOOGLE_API_KEY`만 넣어도 단일 키로 동작한다.
+- 메인 모델은 기본값으로 `gemini-3.5-flash-lite`를 쓴다.
+- fallback 모델은 기본값으로 `gemini-3.1-flash-lite`를 추가 시도한다.
+- 메인 모델이나 현재 키가 quota, rate limit, 모델 오류로 실패하면 다음 키나 다음 모델로 넘긴다.
 
 ## 디스코드 설정
 
-Discord Developer Portal에서 아래만 켜라.
-
-- `MESSAGE CONTENT INTENT`
+Discord Developer Portal에서 `MESSAGE CONTENT INTENT`를 켜라.
 
 권한은 최소 이 정도면 된다.
 
@@ -75,8 +77,6 @@ Discord Developer Portal에서 아래만 켜라.
 
 - 디스코드 관리자 권한 보유자
 - 사용자 ID `635107514471415808`
-
-나머지는 리셋 요청해도 거절한다.
 
 ## 실행
 
