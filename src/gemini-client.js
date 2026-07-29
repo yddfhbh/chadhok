@@ -1098,7 +1098,7 @@ function getGeminiRetryDelayMs(attempt) {
 }
 
 function shouldRetryGeminiRequest(error) {
-  return RETRY_STATUS_CODES.has(error?.status) || error?.name === "AbortError";
+  return RETRY_STATUS_CODES.has(error?.status);
 }
 
 function shouldTryNextGeminiModel(error) {
