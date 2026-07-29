@@ -49,7 +49,7 @@ export function buildDiscordClient() {
     }
 
     if (!action.prompt) {
-      await sendReply(message, "할 말부터 던져라, My son. 예시: `@봇 오늘 해야 할 일 쪼개줘`");
+      await sendReply(message, "할 말부터 던져라, My son.");
       return;
     }
 
