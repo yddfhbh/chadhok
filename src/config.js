@@ -2,6 +2,7 @@ import path from "node:path";
 
 const RESET_PRIVILEGED_USER_ID = "635107514471415808";
 const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite";
+const DEFAULT_GEMINI_VISION_MODEL = "gemini-2.5-flash-lite";
 
 function parseCommaSeparatedValues(value) {
   return String(value ?? "")
@@ -20,19 +21,70 @@ export const GEMINI_API_KEYS = getUniqueValues([
   process.env.GEMINI_API_KEY?.trim(),
   process.env.GOOGLE_API_KEY?.trim(),
 ]);
+export const GEMINI_API_BASE_URL =
+  process.env.GEMINI_API_BASE_URL?.trim() || "https://generativelanguage.googleapis.com/v1beta";
 export const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || DEFAULT_GEMINI_MODEL;
 export const GEMINI_FALLBACK_MODELS = getUniqueValues([
   ...parseCommaSeparatedValues(process.env.GEMINI_FALLBACK_MODELS),
   "gemini-3.1-flash-lite",
 ]);
 export const GEMINI_MODELS = getUniqueValues([GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS]);
-export const GOOGLE_GENAI_USE_VERTEXAI = process.env.GOOGLE_GENAI_USE_VERTEXAI?.trim() || "";
+export const GEMINI_VISION_MODEL =
+  process.env.GEMINI_VISION_MODEL?.trim() || DEFAULT_GEMINI_VISION_MODEL;
+export const GEMINI_VISION_FALLBACK_MODELS = getUniqueValues([
+  ...parseCommaSeparatedValues(process.env.GEMINI_VISION_FALLBACK_MODELS),
+]);
+export const GEMINI_VISION_MODELS = getUniqueValues([
+  GEMINI_VISION_MODEL,
+  ...GEMINI_VISION_FALLBACK_MODELS,
+]);
+export const GEMINI_TIMEOUT_MS = Number.parseInt(process.env.GEMINI_TIMEOUT_MS || "45000", 10);
+export const GEMINI_MAX_OUTPUT_TOKENS = Number.parseInt(
+  process.env.GEMINI_MAX_OUTPUT_TOKENS || "4096",
+  10
+);
+export const GEMINI_MAX_ATTEMPTS_PER_MODEL = Number.parseInt(
+  process.env.GEMINI_MAX_ATTEMPTS_PER_MODEL || "3",
+  10
+);
+export const GEMINI_TIMING_LOGS =
+  String(process.env.GEMINI_TIMING_LOGS ?? "true").trim().toLowerCase() !== "false";
 export const RESET_COMMAND = process.env.RESET_COMMAND?.trim() || "!reset";
 export const MAX_PROMPT_CHARS = Number.parseInt(process.env.MAX_PROMPT_CHARS || "4000", 10);
 export const RESET_ALLOWED_USER_ID =
   process.env.RESET_ALLOWED_USER_ID?.trim() || RESET_PRIVILEGED_USER_ID;
 export const DATA_DIR = path.resolve("data");
 export const CONVERSATIONS_PATH = path.join(DATA_DIR, "conversations.json");
+export const GEMINI_MEMORY_PATH = path.join(DATA_DIR, "gemini-memory.json");
+export const GEMINI_PERMANENT_MEMORY_PATH = path.join(
+  DATA_DIR,
+  "gemini-permanent-memory.json"
+);
+export const GEMINI_MEMORY_DAYS = Number.parseInt(process.env.GEMINI_MEMORY_DAYS || "45", 10);
+export const GEMINI_MEMORY_MAX_MESSAGES_PER_SESSION = Number.parseInt(
+  process.env.GEMINI_MEMORY_MAX_MESSAGES_PER_SESSION || "50",
+  10
+);
+export const GEMINI_MEMORY_MAX_ENTRY_LENGTH = Number.parseInt(
+  process.env.GEMINI_MEMORY_MAX_ENTRY_LENGTH || "4000",
+  10
+);
+export const GEMINI_MEMORY_MAX_CONTEXT_LENGTH = Number.parseInt(
+  process.env.GEMINI_MEMORY_MAX_CONTEXT_LENGTH || "32000",
+  10
+);
+export const GEMINI_IMAGE_MAX_BYTES = Number.parseInt(
+  process.env.GEMINI_IMAGE_MAX_BYTES || String(8 * 1024 * 1024),
+  10
+);
+export const WEB_SEARCH_MAX_RESULTS = Number.parseInt(
+  process.env.WEB_SEARCH_MAX_RESULTS || "8",
+  10
+);
+export const WEB_SEARCH_SOURCE_COUNT = Number.parseInt(
+  process.env.WEB_SEARCH_SOURCE_COUNT || "5",
+  10
+);
 
 const missingEnv = [];
 

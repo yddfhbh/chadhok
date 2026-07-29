@@ -12,11 +12,23 @@ export function buildConversationKey(message) {
   return `${message.guildId}:${message.channelId}:${message.author.id}`;
 }
 
+export function buildChannelSessionKey(message) {
+  const guildId = message.guildId ?? "dm";
+  return `${guildId}:${message.channelId}`;
+}
+
 export function sanitizeUserInput(input) {
   return String(input ?? "")
     .replace(/\r\n/g, "\n")
     .trim()
     .slice(0, MAX_PROMPT_CHARS);
+}
+
+export function getMessageAuthorName(message) {
+  return message.member?.displayName
+    ?? message.author?.globalName
+    ?? message.author?.username
+    ?? "Unknown";
 }
 
 export async function isReplyToBot(message, botUserId) {
@@ -68,4 +80,66 @@ export async function extractMessageAction(message, botUserId) {
   }
 
   return { type: "ignore" };
+}
+
+export async function resolveReferencedMessageChain(message, options = {}) {
+  const maxDepth = Math.max(1, Number(options.maxDepth) || 4);
+  const referencedMessages = [];
+  const seenMessageIds = new Set();
+  let currentMessage = message;
+
+  if (message?.id) {
+    seenMessageIds.add(message.id);
+  }
+
+  for (let depth = 0; depth < maxDepth; depth += 1) {
+    const referencedMessageId = currentMessage?.reference?.messageId;
+    if (!referencedMessageId || typeof currentMessage.fetchReference !== "function") {
+      break;
+    }
+
+    if (seenMessageIds.has(referencedMessageId)) {
+      break;
+    }
+
+    seenMessageIds.add(referencedMessageId);
+
+    let referencedMessage;
+    try {
+      referencedMessage = await currentMessage.fetchReference();
+    } catch (error) {
+      options.onError?.(error, currentMessage);
+      break;
+    }
+
+    if (!referencedMessage) {
+      break;
+    }
+
+    if (referencedMessage.id) {
+      if (
+        referencedMessage.id !== referencedMessageId
+        && seenMessageIds.has(referencedMessage.id)
+      ) {
+        break;
+      }
+
+      seenMessageIds.add(referencedMessage.id);
+    }
+
+    referencedMessages.push(referencedMessage);
+    currentMessage = referencedMessage;
+  }
+
+  return referencedMessages;
+}
+
+export function getMessageChainAttachments(message, referencedMessages = []) {
+  return [message, ...referencedMessages]
+    .filter(Boolean)
+    .flatMap((targetMessage) => (
+      targetMessage?.attachments
+        ? [...targetMessage.attachments.values()]
+        : []
+    ));
 }
