@@ -1,0 +1,19 @@
+{
+  "name": "gigachad-discord-bot",
+  "version": "1.0.0",
+  "description": "Discord chatbot powered by Google AI Studio with a GigaChad-style system prompt.",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@google/genai": "^2.13.0",
+    "discord.js": "^14.21.0",
+    "dotenv": "^17.2.1"
+  }
+}
