@@ -70,6 +70,9 @@ const REPLY_IMAGE_PROMPT_PATTERN =
 const SHORT_REPLY_IMAGE_PATTERN =
   /^(?:이거|이건|저거|저건|그거|그건).{0,10}(?:뭐야|설명|분석|번역)/i;
 
+const GIGACHAD_PRESENCE_CHECK_PATTERN = /거기\s*있(?:어|냐|나)(?:\?|$|\s)/i;
+const GIGACHAD_PRESENCE_REPLY_PREFIX = "오브 콜스, 푝삣삐.";
+
 const permanentMemoryStore = new PermanentMemoryStore(GEMINI_PERMANENT_MEMORY_PATH);
 const geminiMemory = new Map();
 
@@ -123,6 +126,10 @@ async function classifyMessage(message, botUserId) {
   }
 
   return { type: "ignore" };
+}
+
+function isGigachadPresenceCheck(content) {
+  return GIGACHAD_PRESENCE_CHECK_PATTERN.test(String(content ?? "").trim());
 }
 
 function isResetMessage(message, botUserId, content) {
@@ -346,6 +353,8 @@ async function handleWebSearchMessage(message, input) {
 
 async function handleChatMessage(message, botUserId, messageType) {
   let rawPrompt = extractRawPrompt(message, botUserId, messageType.trigger);
+  const shouldPrefixPresenceReply =
+    messageType.trigger === "mention" && isGigachadPresenceCheck(rawPrompt);
   const referencedMessages = await resolveReferencedMessageChain(message, {
     maxDepth: 4,
     onError(error, sourceMessage) {
@@ -415,6 +424,9 @@ async function handleChatMessage(message, botUserId, messageType) {
     });
 
     const answer = answerResult.answer;
+    const finalAnswer = shouldPrefixPresenceReply
+      ? ensureReplyStartsWithPresencePrefix(answer)
+      : answer;
     const permanentMemoryAttribution = formatPermanentMemoryAttribution(
       permanentMemories,
       answerResult.usedPermanentMemoryIds
@@ -423,7 +435,7 @@ async function handleChatMessage(message, botUserId, messageType) {
       ? formatWebSearchSources(webSearchData?.results ?? [])
       : "";
     const responseText = [
-      answer,
+      finalAnswer,
       permanentMemoryAttribution,
       webSearchSources,
     ].filter(Boolean).join("\n\n");
@@ -465,6 +477,19 @@ function extractRawPrompt(message, botUserId, trigger) {
   }
 
   return sanitizeUserInput(content);
+}
+
+function ensureReplyStartsWithPresencePrefix(answer) {
+  const normalizedAnswer = String(answer ?? "").trim();
+  if (!normalizedAnswer) {
+    return GIGACHAD_PRESENCE_REPLY_PREFIX;
+  }
+
+  if (normalizedAnswer.includes(GIGACHAD_PRESENCE_REPLY_PREFIX)) {
+    return normalizedAnswer;
+  }
+
+  return `${GIGACHAD_PRESENCE_REPLY_PREFIX} ${normalizedAnswer}`;
 }
 
 async function findPermanentMemories(message, options) {
