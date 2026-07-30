@@ -47,6 +47,7 @@ import {
   shouldRejectPrompt,
   summarizeUntrustedInstructionText,
 } from "./prompt-security.js";
+import { normalizeExactChoiceAnswer } from "./exact-choice-output.js";
 import {
   deriveWebSearchQuery,
   formatWebSearchContext,
@@ -632,7 +633,7 @@ export async function generateGigachadReply(options) {
       text,
       permanentMemories.map((entry) => entry.id)
     );
-    const answer = sanitizeGeminiAnswer(memoryUsage.cleanText);
+    const answer = sanitizeGeminiAnswer(memoryUsage.cleanText, prompt);
     const usedPermanentMemoryIds = memoryUsage.usedIds.length > 0
       ? memoryUsage.usedIds
       : inferPermanentMemoryUsage(answer, permanentMemories);
@@ -988,7 +989,7 @@ function shouldUseReplyImagesForGeminiPrompt(prompt) {
     || SHORT_REPLY_IMAGE_PATTERN.test(text);
 }
 
-function sanitizeGeminiAnswer(answer) {
+function sanitizeGeminiAnswer(answer, prompt = "") {
   let text = String(answer ?? "").trim();
 
   const leakedAnalysisPatterns = [
@@ -1006,6 +1007,8 @@ function sanitizeGeminiAnswer(answer) {
   if (leakedAnalysisPatterns.some((pattern) => pattern.test(text))) {
     text = stripLeakedAnalysisLines(text);
   }
+
+  text = normalizeExactChoiceAnswer(text, prompt);
 
   return text || "다시 한 번 말해줘라, My son.";
 }
