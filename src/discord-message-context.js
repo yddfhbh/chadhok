@@ -31,6 +31,14 @@ export function getMessageAuthorName(message) {
     ?? "Unknown";
 }
 
+export function getMessageAuthorUsername(message) {
+  return message.author?.username ?? "Unknown";
+}
+
+export function getMessageAuthorId(message) {
+  return message.author?.id ?? "Unknown";
+}
+
 export async function isReplyToBot(message, botUserId) {
   if (!message.reference?.messageId) {
     return false;
