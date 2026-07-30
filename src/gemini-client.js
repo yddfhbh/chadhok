@@ -179,7 +179,7 @@ function parseExplicitSearchQuery(content) {
 }
 
 async function handleResetMessage(message) {
-  if (!canResetConversation(message)) {
+  if (!(await canResetConversation(message))) {
     await sendReply(
       message,
       "이 채널 대화를 리셋할 권한이 없다, My son."
@@ -213,7 +213,7 @@ async function handlePermanentMemoryMessage(message) {
   const clearCurrentScopeOnly = command === "%기억제거 이서버만";
 
   if (command === "%기억제거" || clearCurrentScopeOnly) {
-    if (!canResetConversation(message)) {
+    if (!(await canResetConversation(message))) {
       await sendReply(message, "영구 기억을 지울 권한이 없다, My son.");
       return;
     }

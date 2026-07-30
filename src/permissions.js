@@ -2,12 +2,14 @@ import { PermissionsBitField } from "discord.js";
 
 import { RESET_ALLOWED_USER_ID } from "./config.js";
 
-export function canResetConversation(message) {
+export async function canResetConversation(message) {
   if (message.author.id === RESET_ALLOWED_USER_ID) {
     return true;
   }
 
-  return Boolean(
-    message.memberPermissions?.has(PermissionsBitField.Flags.Administrator)
-  );
+  const member =
+    message.member
+    ?? await message.guild?.members.fetch(message.author.id).catch(() => null);
+
+  return member?.permissions.has(PermissionsBitField.Flags.Administrator) ?? false;
 }
