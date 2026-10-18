@@ -104,7 +104,7 @@ npm run dev
 `.env`에 다음 값을 별도로 설정하세요 (실제 Discord 사용자 ID로 변경):
 
 ```dotenv
-# chadhok 자신의 Discord 애플리케이션 ID, 슬래시 명령 등록에 필요
+# chadhok Discord 애플리케이션 ID (생략 가능: 등록 시 토큰에서 자동 확인)
 DISCORD_CLIENT_ID=<Chadhok application ID>
 # 기존 autonomous-discord-agent의 DISCORD_TEST_GUILD_ID와 동일한 테스트 서버
 PEER_CHAT_GUILD_ID=<test guild ID>
