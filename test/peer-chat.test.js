@@ -145,3 +145,21 @@ test("/봇대화 authorization is restricted and state is independent per channe
     assert.equal(peer.isEnabled(CHANNEL), false);
   });
 });
+
+test("human replying to Chadhok's real message is recognized without an @mention", async () => {
+  process.env.DISCORD_TOKEN ||= "test-discord-token";
+  process.env.GEMINI_API_KEYS ||= "test-key";
+  const { classifyMessage } = await import("../src/gemini-client.js");
+  const fake = {
+    content: "이어가자 브로",
+    attachments: { size: 0 },
+    mentions: { has: () => false },
+    guildId: GUILD,
+    reference: { messageId: OTHER },
+    fetchReference: async () => ({ author: { id: CHADHOK } }),
+  };
+  assert.deepEqual(await classifyMessage(fake, CHADHOK),
+    { type: "chat", trigger: "reply" });
+  fake.fetchReference = async () => ({ author: { id: PEER } });
+  assert.deepEqual(await classifyMessage(fake, CHADHOK), { type: "ignore" });
+});
