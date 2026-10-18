@@ -28,6 +28,7 @@ import {
   getMessageChainAttachments,
   resolveReferencedMessageChain,
   sanitizeUserInput,
+  isReplyToBot,
 } from "./discord-message-context.js";
 import { sendReply } from "./discord-replies.js";
 import {
@@ -131,6 +132,14 @@ async function classifyMessage(message, botUserId) {
 
   if (!message.guildId) {
     return { type: "chat", trigger: "dm" };
+  }
+
+  // Existing README promised reply-to-bot conversations. Honor real Discord
+  // references even without another @mention; never trust a text-only quote.
+  if (await isReplyToBot(message, botUserId)) {
+    return RESET_KEYWORDS.has(content.toLowerCase())
+      ? { type: "reset" }
+      : { type: "chat", trigger: "reply" };
   }
 
   return { type: "ignore" };
