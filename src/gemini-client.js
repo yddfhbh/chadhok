@@ -115,7 +115,7 @@ export async function handleGigachadMessage(message, botUserId, options = {}) {
   return handleChatMessage(message, botUserId, messageType, options);
 }
 
-async function classifyMessage(message, botUserId) {
+export async function classifyMessage(message, botUserId) {
   const content = String(message.content ?? "").trim();
 
   if (!content && message.attachments.size === 0) {
