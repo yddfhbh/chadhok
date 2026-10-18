@@ -16,6 +16,17 @@ function getUniqueValues(values) {
 }
 
 export const DISCORD_TOKEN = process.env.DISCORD_TOKEN?.trim() || "";
+// Disabled until the operator sets both the test guild and explicit peer IDs.
+const discordId = /^\d{15,22}$/;
+export const PEER_CHAT_GUILD_ID = process.env.PEER_CHAT_GUILD_ID?.trim() || "";
+export const PEER_CHAT_BOT_IDS = Object.freeze(getUniqueValues(
+  parseCommaSeparatedValues(process.env.PEER_CHAT_BOT_IDS)
+    .filter(value => discordId.test(value))
+));
+export const PEER_CHAT_OWNER_ID = process.env.PEER_CHAT_OWNER_ID?.trim() || RESET_PRIVILEGED_USER_ID;
+export const PEER_CHAT_COOLDOWN_MS = 6000;
+export const PEER_CHAT_MAX_REPLIES = 60;
+export const PEER_CHAT_FILE = path.resolve("data/peer-chat-channels.json");
 export const GEMINI_API_KEYS = getUniqueValues([
   ...parseCommaSeparatedValues(process.env.GEMINI_API_KEYS),
   process.env.GEMINI_API_KEY?.trim(),
