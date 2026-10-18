@@ -17,7 +17,7 @@ function getUniqueValues(values) {
 
 export const DISCORD_TOKEN = process.env.DISCORD_TOKEN?.trim() || "";
 // Disabled until the operator sets both the test guild and explicit peer IDs.
-const discordId = /^\\d{15,22}$/;
+const discordId = /^\d{15,22}$/;
 export const PEER_CHAT_GUILD_ID = process.env.PEER_CHAT_GUILD_ID?.trim() || "";
 export const PEER_CHAT_BOT_IDS = Object.freeze(getUniqueValues(
   parseCommaSeparatedValues(process.env.PEER_CHAT_BOT_IDS)
