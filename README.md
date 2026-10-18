@@ -95,3 +95,40 @@ npm run dev
 - 대화 문맥은 Google Interactions API의 `previous_interaction_id`를 사용한다.
 - `system_instruction`은 매 요청마다 다시 보낸다.
 - 로컬 상태는 `data/conversations.json`에 저장된다.
+
+
+## 봇 간 대화 실험 (/봇대화, /말하기)
+
+이 기능은 **꺼진 상태로 시작**하며, 실제 테스트 서버와 명시적으로 허용한 외부 봇만 반응합니다. 기존 DM/멘션 챗봇과 시스템 프롬프트는 유지합니다.
+
+`.env`에 다음 값을 별도로 설정하세요 (실제 Discord 사용자 ID로 변경):
+
+```dotenv
+# chadhok 자신의 Discord 애플리케이션 ID, 슬래시 명령 등록에 필요
+DISCORD_CLIENT_ID=<Chadhok application ID>
+# 기존 autonomous-discord-agent의 DISCORD_TEST_GUILD_ID와 동일한 테스트 서버
+PEER_CHAT_GUILD_ID=<test guild ID>
+# 자동 대화할 상대 봇 ID. 자신(Chadhok)의 ID는 넣지 않습니다.
+PEER_CHAT_BOT_IDS=<autonomous agent bot ID>,1561276856517529620
+PEER_CHAT_OWNER_ID=635107514471415808
+```
+
+설정 후 `npm run register`로 테스트 서버에 슬래시 명령을 **추가 등록**합니다. 이 스크립트는 `/말하기`·`/봇대화`만 upsert하며 서버의 다른 명령을 삭제하지 않습니다.
+
+- `/말하기 내용:...`: 지정 사용자만 사용 가능. 공개 interaction 응답 대신 `channel.send`로 일반 봇 메시지를 게시하고, 성공 시 비공개 확인 응답을 제거합니다. 서버의 감사 로그 및 실행자 클라이언트 UI를 숨기지는 않습니다. `@everyone` 등 멘션은 발생시키지 않습니다.
+- `/봇대화 모드:켜기`, `끄기`, `상태`: 설정된 테스트 서버의 현재 채널만 전환. 지정 사용자나 해당 서버 관리자만 제어. 선택 결과는 `data/peer-chat-channels.json`에 저장됩니다.
+- ON 채널에서 허용된 다른 **실제 Discord 봇**의 메시지를 받으면, 멘션 없이 기존 기가채드 스타일로 응답합니다. 인간·다른 봇·웹훅·자신의 메시지는 자동 대화 트리거가 아닙니다. 기존 인간의 멘션/DM 기능은 그대로입니다.
+- 채널당 한 번에 한 요청만 생성합니다. 폭주 시 최신 후보만 유지하고 **최소 6초 간격**, **채널별 60회 자동 답변 후 해당 채널 OFF**를 적용합니다. 새 대화를 시작하려면 다시 `/봇대화 모드:켜기`를 실행하면 됩니다. OFF한 동안 만들던 답변은 전송하지 않습니다.
+- API 모델 실패/타임아웃에서 다른 봇에게 오류 문구를 보내 무한 오류 루프가 생기지 않도록 했습니다.
+
+### autonomous-discord-agent와 양방향 통합
+
+Chadhok과 대화할 다른 에이전트는 해당 봇을 **명시적으로 허용**해야 합니다. autonomous-discord-agent의 대응 PR을 병합한 다음 다음 환경변수를 설정하세요.
+
+```dotenv
+DISCORD_ADDITIONAL_PEER_BOT_IDS=<Chadhok bot ID>
+```
+
+기존 외부 봇 `1561276856517529620`의 허용은 유지됩니다. 두 봇을 같은 테스트 서버에 초대하고 채널 권한을 확인한 뒤, 각 봇에서 `/봇대화 모드:켜기`를 수행해야 왕복 대화가 가능합니다. 이 저장소의 수정만으로 상대 에이전트가 Chadhok의 메시지를 자동 인식하지는 않습니다.
+
+실행 전 `npm run check && npm test`로 점검하세요. API 호출 수와 Discord 속도 제한을 관찰하면서 테스트 서버에서만 사용하세요.
