@@ -464,6 +464,10 @@ async function handleChatMessage(message, botUserId, messageType, options = {}) 
       webSearchSources,
     ].filter(Boolean).join("\n\n");
 
+    // If peer chat was disabled during generation, do not persist a fabricated
+    // answer that the channel never actually received.
+    if (options.canSend && !options.canSend()) return false;
+
     appendGeminiMemoryEntry(sessionKey, {
       role: "user",
       authorName: getMessageAuthorName(message),
