@@ -8,7 +8,7 @@ import {
 import {
   GEMINI_MODEL, PEER_CHAT_GUILD_ID, PEER_CHAT_BOT_IDS,
   PEER_CHAT_OWNER_ID, PEER_CHAT_FILE,
-  PEER_CHAT_COOLDOWN_MS, PEER_CHAT_MAX_REPLIES,
+  PEER_CHAT_COOLDOWN_MS,
 } from "./config.js";
 import { PeerChat } from "./peer-chat.js";
 import { handleCommand } from "./commands.js";
@@ -31,7 +31,6 @@ export function buildDiscordClient() {
     peerIds: PEER_CHAT_BOT_IDS,
     ownerId: PEER_CHAT_OWNER_ID,
     cooldownMs: PEER_CHAT_COOLDOWN_MS,
-    maxReplies: PEER_CHAT_MAX_REPLIES,
   });
 
   client.once(Events.ClientReady, (readyClient) => {
