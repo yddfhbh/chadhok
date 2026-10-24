@@ -25,7 +25,7 @@ async function fixture(fn, options = {}) {
   try {
     const filePath = join(dir, "peer-chat.json");
     const peer = new PeerChat({ filePath, guildId: GUILD, peerIds: [PEER],
-      ownerId: OWNER, cooldownMs: 0, maxReplies: 3, ...options });
+      ownerId: OWNER, cooldownMs: 0, ...options });
     await fn(peer, filePath);
   } finally {
     rmSync(dir, { recursive: true, force: true });
@@ -73,8 +73,8 @@ test("enabled channels persist, OFF while generating prevents late sends", async
   });
 });
 
-test("peer chat coalesces messages and stops after configured reply budget", async () => {
-  await fixture(async peer => {
+test("peer chat coalesces bursts and remains enabled after more than 60 automatic replies", async () => {
+  await fixture(async (peer, filePath) => {
     await peer.setEnabled(CHANNEL, true);
     let release;
     const observed = [];
@@ -89,11 +89,48 @@ test("peer chat coalesces messages and stops after configured reply budget", asy
     release();
     await first;
     assert.deepEqual(observed, ["one", "three"]);
+
+    for (let i = 0; i < 75; i++) {
+      await peer.observe(message({ id: "next-" + i }), CHADHOK, async msg => {
+        observed.push(msg.id);
+        return true;
+      });
+    }
+    assert.equal(observed.length, 77);
     assert.equal(peer.isEnabled(CHANNEL), true);
-    await peer.observe(message({ id: "four" }), CHADHOK, async () => true);
-    assert.equal(peer.isEnabled(CHANNEL), true);
-    await peer.observe(message({ id: "five" }), CHADHOK, async () => true);
+    const restarted = new PeerChat({ filePath, guildId: GUILD, peerIds: [PEER] });
+    await restarted.load();
+    assert.equal(restarted.isEnabled(CHANNEL), true);
+    // The explicit OFF command is still authoritative.
+    await peer.setEnabled(CHANNEL, false);
     assert.equal(peer.isEnabled(CHANNEL), false);
+  });
+});
+
+test("configurable 3-second cooldown applies between peer model starts without delaying the first turn", async () => {
+  let clock = Date.now();
+  const waits = [];
+  await fixture(async peer => {
+    await peer.setEnabled(CHANNEL, true);
+    const started = [];
+    for (let i = 0; i < 3; i++) {
+      await peer.observe(message({ id: "clock-" + i, createdTimestamp: clock }), CHADHOK, async () => {
+        started.push(clock);
+        return true;
+      });
+    }
+    assert.deepEqual(waits, [3000, 3000]);
+    assert.equal(started.length, 3);
+    assert.equal(started[1] - started[0], 3000);
+    assert.equal(started[2] - started[1], 3000);
+    assert.equal(peer.isEnabled(CHANNEL), true);
+  }, {
+    cooldownMs: 3000,
+    now: () => clock,
+    sleep: async ms => {
+      waits.push(ms);
+      clock += ms;
+    }
   });
 });
 

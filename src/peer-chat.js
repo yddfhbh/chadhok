@@ -3,15 +3,14 @@ import path from "node:path";
 
 // Strict opt-in per channel. Neither ordinary bots nor webhooks can trigger it.
 export class PeerChat {
-  constructor({ filePath, guildId, peerIds = [], ownerId, cooldownMs = 6000,
-                maxReplies = 60, maxAgeMs = 90000, now = Date.now,
+  constructor({ filePath, guildId, peerIds = [], ownerId, cooldownMs = 3000,
+                maxAgeMs = 90000, now = Date.now,
                 sleep = ms => new Promise(resolve => setTimeout(resolve, ms)) }) {
     this.filePath = filePath;
     this.guildId = guildId;
     this.peerIds = new Set(peerIds);
     this.ownerId = ownerId;
     this.cooldownMs = cooldownMs;
-    this.maxReplies = maxReplies;
     this.maxAgeMs = maxAgeMs;
     this.now = now;
     this.sleep = sleep;
@@ -19,7 +18,6 @@ export class PeerChat {
     this.running = new Set();
     this.pending = new Map();
     this.lastAttemptAt = new Map();
-    this.replyCounts = new Map();
     this.loaded = null;
     this.saveQueue = Promise.resolve();
   }
@@ -45,7 +43,6 @@ export class PeerChat {
     if (!/^\d{15,22}$/.test(String(channelId))) throw new Error("invalid channel");
     if (enabled) {
       this.channels.add(channelId);
-      this.replyCounts.set(channelId, 0);
     } else {
       this.channels.delete(channelId);
       this.pending.delete(channelId);
@@ -78,7 +75,7 @@ export class PeerChat {
   }
 
   // One model call at a time per channel. Coalesce bursts into the newest
-  // message and never send after OFF, stale messages or an exhausted budget.
+  // message, keep a cooldown between attempts, and never send after OFF or stale messages.
   async observe(message, ownBotId, reply) {
     await this.load();
     if (!this.isEligible(message, ownBotId)) return false;
@@ -91,19 +88,13 @@ export class PeerChat {
         const candidate = this.pending.get(id);
         this.pending.delete(id);
         if (!this.isEligible(candidate, ownBotId)) continue;
-        if ((this.replyCounts.get(id) ?? 0) >= this.maxReplies) {
-          await this.setEnabled(id, false);
-          console.warn(`[peer-chat] channel ${id} disabled after reply budget`);
-          break;
-        }
         const elapsed = this.now() - (this.lastAttemptAt.get(id) ?? -Infinity);
         const delay = Math.max(0, this.cooldownMs - elapsed);
         if (delay) await this.sleep(delay);
         if (!this.isEligible(candidate, ownBotId)) continue;
         this.lastAttemptAt.set(id, this.now());
         try {
-          const sent = await reply(candidate, () => this.isEligible(candidate, ownBotId));
-          if (sent) this.replyCounts.set(id, (this.replyCounts.get(id) ?? 0) + 1);
+          await reply(candidate, () => this.isEligible(candidate, ownBotId));
         } catch (error) {
           console.error("[peer-chat] reply failure:", error?.name ?? "unknown");
         }

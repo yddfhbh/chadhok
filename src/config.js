@@ -24,8 +24,16 @@ export const PEER_CHAT_BOT_IDS = Object.freeze(getUniqueValues(
     .filter(value => discordId.test(value))
 ));
 export const PEER_CHAT_OWNER_ID = process.env.PEER_CHAT_OWNER_ID?.trim() || RESET_PRIVILEGED_USER_ID;
-export const PEER_CHAT_COOLDOWN_MS = 6000;
-export const PEER_CHAT_MAX_REPLIES = 60;
+// Configurable minimum delay between peer-chat model attempts per channel.
+// Keep at least one second to avoid an accidental tight loop.
+const configuredPeerCooldown = process.env.PEER_CHAT_COOLDOWN_MS?.trim();
+export const PEER_CHAT_COOLDOWN_MS =
+  configuredPeerCooldown ? Number(configuredPeerCooldown) : 3000;
+if (!Number.isSafeInteger(PEER_CHAT_COOLDOWN_MS) ||
+    PEER_CHAT_COOLDOWN_MS < 1000 ||
+    PEER_CHAT_COOLDOWN_MS > 60000) {
+  throw new Error("Invalid PEER_CHAT_COOLDOWN_MS: expected 1000-60000 milliseconds");
+}
 export const PEER_CHAT_FILE = path.resolve("data/peer-chat-channels.json");
 export const GEMINI_API_KEYS = getUniqueValues([
   ...parseCommaSeparatedValues(process.env.GEMINI_API_KEYS),
